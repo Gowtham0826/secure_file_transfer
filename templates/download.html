@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure Download</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+    <h2>Download & Decrypt File</h2>
+    <form action="/download" method="POST">
+        <input type="text" name="filename" placeholder="Enter filename" required>
+        <input type="password" name="password" placeholder="Enter password" required>
+        <button type="submit">Download</button>
+    </form>
+</div>
+</body>
+</html>
