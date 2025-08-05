@@ -1,67 +1,56 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for
-import os
-import time
-from ecc_utils import encrypt_file, decrypt_file, derive_key
-from blockchain import Blockchain
+from flask import Flask, request, render_template, send_file
 from werkzeug.utils import secure_filename
+import os
+from cryptography.fernet import Fernet
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-blockchain = Blockchain()
+app.config['UPLOAD_FOLDER'] = 'uploads'
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+# Generate and store a key (you can store this in an env variable or file)
+key = Fernet.generate_key()
+cipher_suite = Fernet(key)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return '''
+        <h2>Secure File Transfer</h2>
+        <form method="POST" action="/upload" enctype="multipart/form-data">
+            <input type="file" name="file" required><br><br>
+            <input type="submit" value="Upload & Encrypt">
+        </form>
+    '''
 
 @app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files['file']
-    password = request.form['password']
-    if file and password:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-
-        key = derive_key(password)
-        encrypted_path = filepath + ".enc"
-        encrypt_file(filepath, encrypted_path, key)
-        os.remove(filepath)
-
-        os.utime(encrypted_path, (time.time(), time.time()))
-        blockchain.add_transaction(f"File {filename} uploaded.")
-
-        return render_template("message.html", message="File uploaded and encrypted successfully.", filename=filename+".enc")
-    return render_template("message.html", message="Upload failed.")
-
-@app.route('/download')
-def download_page():
-    return render_template("download.html")
-
-@app.route('/download', methods=['POST'])
-def download():
-    filename = request.form['filename']
-    password = request.form['password']
+def upload_file():
+    uploaded_file = request.files['file']
+    filename = secure_filename(uploaded_file.filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    uploaded_file.save(filepath)
 
-    if os.path.exists(filepath):
-        # Check expiration (1 hour)
-        if time.time() - os.path.getmtime(filepath) > 3600:
-            os.remove(filepath)
-            return render_template("message.html", message="File expired.")
+    # Encrypt the file
+    with open(filepath, 'rb') as f:
+        data = f.read()
+    encrypted_data = cipher_suite.encrypt(data)
 
-        key = derive_key(password)
-        decrypted_path = filepath + ".dec"
-        try:
-            decrypt_file(filepath, decrypted_path, key)
-            blockchain.add_transaction(f"File {filename} downloaded.")
-            return send_file(decrypted_path, as_attachment=True)
-        except Exception as e:
-            return render_template("message.html", message="Decryption failed. Wrong password?")
-    return render_template("message.html", message="File not found.")
+    encrypted_path = os.path.join(app.config['UPLOAD_FOLDER'], f'encrypted_{filename}')
+    with open(encrypted_path, 'wb') as f:
+        f.write(encrypted_data)
 
+    return f'''
+        <p>File uploaded and encrypted successfully!</p>
+        <a href="/download/{'encrypted_' + filename}">Download Encrypted File</a>
+    '''
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    return send_file(path, as_attachment=True)
+
+# ✅ REQUIRED for Render to detect the correct port and bind publicly
 if __name__ == '__main__':
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get('PORT', 10000))
+    app.run(debug=True, host='0.0.0.0', port=port)
