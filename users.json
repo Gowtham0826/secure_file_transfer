@@ -1,0 +1,10 @@
+{
+    "alice": {
+        "password": "1234",
+        "role": "sender"
+    },
+    "bob": {
+        "password": "5678",
+        "role": "receiver"
+    }
+}

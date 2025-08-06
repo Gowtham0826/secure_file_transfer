@@ -1,0 +1,4 @@
+Flask
+pycryptodome
+Flask==2.2.5
+
