@@ -1,8 +1,2 @@
-Flask
-<<<<<<< HEAD
-pycryptodome
-Flask==2.2.5
-
-=======
+flask==2.2.0
 cryptography
->>>>>>> f5e8ac0294d88315cdd96ef3848a8f42bbf6a9ec
