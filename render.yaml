@@ -2,5 +2,10 @@ services:
   - type: web
     name: secure-file-transfer
     env: python
+<<<<<<< HEAD
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
+=======
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+>>>>>>> f5e8ac0294d88315cdd96ef3848a8f42bbf6a9ec

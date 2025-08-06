@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure Upload</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+    <h2>Upload & Encrypt File</h2>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <input type="password" name="password" placeholder="Enter password" required>
+        <button type="submit">Upload</button>
+    </form>
+</div>
+</body>
+</html>
