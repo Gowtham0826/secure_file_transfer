@@ -1,61 +1,56 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'secure_file_transfer_key'
-UPLOAD_FOLDER = 'uploads'
+
+UPLOAD_FOLDER = 'uploaded_files'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Create uploads folder if it doesn't exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# ---------------- HOME ----------------
+@app.route('/')
+def home():
+    return render_template('login.html')  # login page
 
-# Sample users
-users = {
-    "sender1": {"password": "pass1", "role": "sender"},
-    "receiver1": {"password": "pass1", "role": "receiver"}
-}
-
-@app.route('/', methods=['GET', 'POST'])
+# ---------------- LOGIN ROUTE ----------------
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
+        role = request.form['role']  # 'sender' or 'receiver'
         password = request.form['password']
-        role = request.form['role']
-        user = users.get(username)
 
-        if user and user["password"] == password and user["role"] == role:
-            session['username'] = username
-            session['role'] = role
-            return redirect(url_for('upload' if role == 'sender' else 'download'))
-        return "Invalid credentials"
-
+        # Add your authentication logic here
+        if role == 'sender':
+            return redirect(url_for('upload_page'))
+        else:
+            return redirect(url_for('receiver_dashboard'))
     return render_template('login.html')
 
+# ---------------- UPLOAD PAGE (SENDER) ----------------
 @app.route('/upload', methods=['GET', 'POST'])
-def upload():
-    if 'username' not in session or session['role'] != 'sender':
-        return redirect(url_for('login'))
-
+def upload_page():
     if request.method == 'POST':
         file = request.files['file']
         if file:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(filepath)
-            return "File uploaded successfully!"
-
+            filename = secure_filename(file.filename)
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(save_path)
+            return 'File uploaded successfully!'
     return render_template('upload.html')
 
-@app.route('/download')
-def download():
-    if 'username' not in session or session['role'] != 'receiver':
-        return redirect(url_for('login'))
+# ---------------- RECEIVER DASHBOARD ----------------
+@app.route('/receiver')
+def receiver_dashboard():
+    files = os.listdir(UPLOAD_FOLDER)
+    return render_template('receiver_dashboard.html', files=files)
 
-    files = os.listdir(app.config['UPLOAD_FOLDER'])
-    return render_template('download.html', files=files)
-
-@app.route('/uploads/<filename>')
+# ---------------- DOWNLOAD FILE ----------------
+@app.route('/download/<filename>')
 def download_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
+# ---------------- RUN APP ----------------
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=10000)
+    app.run(debug=True)
